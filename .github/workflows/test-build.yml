@@ -51,12 +51,12 @@ jobs:
           path: ./opt/voice-agent/
 
       - name: Make binary executable
-        run: chmod +x /opt/voice-agent/agent-binary
+        run: chmod +x ./opt/voice-agent/agent-binary
 
       - name: Verify deployment
         run: |
-          ls -la /opt/voice-agent/
-          /opt/voice-agent/agent-binary
+          ls -la ./opt/voice-agent/
+          ./opt/voice-agent/agent-binary
 
       - name: Smoke test - verify Pi connectivity
         run: ping -c 3 pi-server

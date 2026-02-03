@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
@@ -8,18 +8,17 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, Linux]
-    container: golang:1.24
+    runs-on: ubuntu-latest
+    # CI runs on GitHub's cloud
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          go-version: '1.24'
 
       - name: Lint
         run: |
@@ -30,10 +29,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out ./...
 
       - name: Build Agent Binary
-        run: |
-          go build -o agent-binary ./agent/main.go
-          ls -la
-          pwd
+        run: go build -o agent-binary ./agent/main.go
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -41,22 +37,26 @@ jobs:
           name: agent-binary
           path: agent-binary
 
-  integration:
+  deploy:
     needs: build
     runs-on: [self-hosted, Linux]
-    # Runs on host for Tailscale network access
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # CD only runs on push to main, not on PRs
 
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
           name: agent-binary
-          path: ./
+          path: /opt/voice-agent/
 
-      - name: Verify download
+      - name: Make binary executable
+        run: chmod +x /opt/voice-agent/agent-binary
+
+      - name: Verify deployment
         run: |
-          pwd
-          ls -la
+          ls -la /opt/voice-agent/
+          /opt/voice-agent/agent-binary
 
       - name: Smoke test - verify Pi connectivity
         run: ping -c 3 pi-server

@@ -14,9 +14,6 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          set-safe-directory: true
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -28,6 +25,7 @@ jobs:
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
+          args: --buildvcs=false
 
       - name: Test
         run: go test -v -race -coverprofile=coverage.out ./...

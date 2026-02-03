@@ -48,7 +48,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: agent-binary
-          path: /opt/voice-agent/
+          path: ./opt/voice-agent/
 
       - name: Make binary executable
         run: chmod +x /opt/voice-agent/agent-binary

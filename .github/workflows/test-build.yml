@@ -9,7 +9,7 @@ on:
 jobs:
   build:
     runs-on: [self-hosted, Linux]
-    container: golang:1.21
+    container: golang:1.24
 
     steps:
       - name: Checkout Code

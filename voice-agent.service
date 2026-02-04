@@ -1,0 +1,13 @@
+[Unit]
+Description=Homelab Voice Agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/matt/actions-runner/_work/Homelab_Voice_Agent/Homelab_Voice_Agent/opt/voice-agent/agent-binary
+Restart=on-failure
+RestartSec=5
+User=matt
+
+[Install]
+WantedBy=multi-user.target

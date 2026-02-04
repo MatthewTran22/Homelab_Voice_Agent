@@ -4,5 +4,5 @@ package main
 import "fmt"
 
 func main() {
-	fmt.Println("Test run we got the dummy agent")
+	fmt.Println("This is to test actual CD")
 }

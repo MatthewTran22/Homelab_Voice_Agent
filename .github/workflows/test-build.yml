@@ -54,10 +54,10 @@ jobs:
         run: chmod +x ./opt/voice-agent/agent-binary
 
       - name: Restart voice agent service
-        run: sudo systemctl restart voice-agent
+        run: systemctl restart voice-agent
 
       - name: Check service status
-        run: sudo systemctl status voice-agent --no-pager
+        run: systemctl status voice-agent --no-pager
 
       - name: Smoke test - verify Pi connectivity
         run: ping -c 3 pi-server

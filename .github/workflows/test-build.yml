@@ -66,12 +66,15 @@ jobs:
     runs-on: [self-hosted, Linux]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+
     steps:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Pull latest image
-        run: docker pull ghcr.io/${{ github.repository }}:latest
+        run: docker pull $(echo "$IMAGE" | tr '[:upper:]' '[:lower:]'):latest
 
       - name: Stop existing container
         run: docker stop voice-agent || true
@@ -84,7 +87,7 @@ jobs:
           docker run -d \
             --name voice-agent \
             --restart unless-stopped \
-            ghcr.io/${{ github.repository }}:latest
+            $(echo "$IMAGE" | tr '[:upper:]' '[:lower:]'):latest
 
       - name: Check container status
         run: docker ps | grep voice-agent

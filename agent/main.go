@@ -1,3 +1,4 @@
+// Package main is the LLM agent for processing transcriptions.
 package main
 
 import "fmt"

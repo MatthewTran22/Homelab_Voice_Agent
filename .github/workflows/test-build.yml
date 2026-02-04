@@ -42,13 +42,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase repo name
+        run: echo "REPO=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
       - name: Build and push agent image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}:latest
+          tags: ${{ env.REGISTRY }}/${{ env.REPO }}:latest
 
   build-discord-bot:
     runs-on: ubuntu-latest
@@ -69,13 +72,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase repo name
+        run: echo "REPO=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
       - name: Build and push discord-bot image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
           context: ./discord-bot
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}-discord-bot:latest
+          tags: ${{ env.REGISTRY }}/${{ env.REPO }}-discord-bot:latest
 
   # Jetson Orin Nano agents - built but NOT deployed to laptop
   build-asr-agent:
@@ -97,13 +103,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set lowercase repo name
+        run: echo "REPO=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
       - name: Build and push asr-agent image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
           context: ./asr-agent
           push: true
-          tags: ${{ env.REGISTRY }}/${{ github.repository }}-asr-agent:latest
+          tags: ${{ env.REGISTRY }}/${{ env.REPO }}-asr-agent:latest
 
   # Laptop deploy - only discord-bot and LLM agent (NOT asr-agent)
   deploy:

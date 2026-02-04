@@ -6,10 +6,17 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    # CI runs on GitHub's cloud
+
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout Code
@@ -28,36 +35,62 @@ jobs:
       - name: Test
         run: go test -v -race -coverprofile=coverage.out ./...
 
-      - name: Build Agent Binary
-        run: go build -o agent-binary ./agent/main.go
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
         with:
-          name: agent-binary
-          path: agent-binary
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
   deploy:
     needs: build
     runs-on: [self-hosted, Linux]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    # CD only runs on push to main, not on PRs
 
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: agent-binary
-          path: ./opt/voice-agent/
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Make binary executable
-        run: chmod +x ./opt/voice-agent/agent-binary
+      - name: Pull latest image
+        run: docker pull ghcr.io/${{ github.repository }}:latest
 
-      - name: Restart voice agent service
-        run: systemctl --user restart voice-agent
+      - name: Stop existing container
+        run: docker stop voice-agent || true
 
-      - name: Check service status
-        run: systemctl --user status voice-agent --no-pager
+      - name: Remove existing container
+        run: docker rm voice-agent || true
+
+      - name: Run new container
+        run: |
+          docker run -d \
+            --name voice-agent \
+            --restart unless-stopped \
+            ghcr.io/${{ github.repository }}:latest
+
+      - name: Check container status
+        run: docker ps | grep voice-agent
+
+      - name: View container logs
+        run: docker logs voice-agent
 
       - name: Smoke test - verify Pi connectivity
         run: ping -c 3 pi-server

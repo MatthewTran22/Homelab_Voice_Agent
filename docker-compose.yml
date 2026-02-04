@@ -14,3 +14,12 @@ services:
       - PYTHONUNBUFFERED=1
     volumes:
       - ./audio-output:/app/audio
+
+  asr-agent:
+    build: ./asr-agent
+    container_name: asr-agent
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./audio-output:/app/audio

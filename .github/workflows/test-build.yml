@@ -77,6 +77,35 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ github.repository }}-discord-bot:latest
 
+  # Jetson Orin Nano agents - built but NOT deployed to laptop
+  build-asr-agent:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push asr-agent image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./asr-agent
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}-asr-agent:latest
+
+  # Laptop deploy - only discord-bot and LLM agent (NOT asr-agent)
   deploy:
     needs: [build-agent, build-discord-bot]
     runs-on: [self-hosted, Linux]

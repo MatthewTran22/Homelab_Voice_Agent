@@ -8,10 +8,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build:
+  build-agent:
     runs-on: ubuntu-latest
 
     permissions:
@@ -43,57 +42,91 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=sha,prefix=
-            type=raw,value=latest
-
-      - name: Build and push Docker image
+      - name: Build and push agent image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}:latest
+
+  build-discord-bot:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push discord-bot image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./discord-bot
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.repository }}-discord-bot:latest
 
   deploy:
-    needs: build
+    needs: [build-agent, build-discord-bot]
     runs-on: [self-hosted, Linux]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-    env:
-      IMAGE: ghcr.io/${{ github.repository }}
-
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Pull latest image
-        run: docker pull $(echo "$IMAGE" | tr '[:upper:]' '[:lower:]'):latest
+      - name: Pull latest images
+        run: |
+          docker pull $(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]'):latest
+          docker pull $(echo "ghcr.io/${{ github.repository }}-discord-bot" | tr '[:upper:]' '[:lower:]'):latest
 
-      - name: Stop existing container
-        run: docker stop voice-agent || true
+      - name: Stop and remove existing containers
+        run: |
+          docker stop voice-agent discord-bot || true
+          docker rm voice-agent discord-bot || true
 
-      - name: Remove existing container
-        run: docker rm voice-agent || true
+      - name: Create audio output directory
+        run: mkdir -p ~/audio-output
 
-      - name: Run new container
+      - name: Run agent container
         run: |
           docker run -d \
             --name voice-agent \
             --restart unless-stopped \
-            $(echo "$IMAGE" | tr '[:upper:]' '[:lower:]'):latest
+            $(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]'):latest
+
+      - name: Run discord-bot container
+        run: |
+          docker run -d \
+            --name discord-bot \
+            --restart unless-stopped \
+            -e DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }} \
+            -e DISCORD_CHANNEL_ID=${{ secrets.DISCORD_CHANNEL_ID }} \
+            -v ~/audio-output:/app/audio \
+            $(echo "ghcr.io/${{ github.repository }}-discord-bot" | tr '[:upper:]' '[:lower:]'):latest
 
       - name: Check container status
-        run: docker ps | grep voice-agent
+        run: docker ps
 
-      - name: View container logs
+      - name: View agent logs
         run: docker logs voice-agent
+
+      - name: View discord-bot logs
+        run: docker logs discord-bot || true
 
       - name: Smoke test - verify Pi connectivity
         run: ping -c 3 pi-server

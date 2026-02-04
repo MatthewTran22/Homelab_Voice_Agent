@@ -1,0 +1,16 @@
+services:
+  # agent:
+  #   image: ghcr.io/matthewtran22/homelab_voice_agent:latest
+  #   container_name: voice-agent
+  #   restart: unless-stopped
+
+  discord-bot:
+    build: ./discord-bot
+    container_name: discord-bot
+    restart: unless-stopped
+    env_file:
+      - ./discord-bot/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./audio-output:/app/audio

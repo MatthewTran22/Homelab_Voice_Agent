@@ -130,10 +130,45 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.REPO }}-asr-agent:latest
 
+  # Jetson deploy - asr-agent only
+  deploy-jetson:
+    needs: [build-asr-agent]
+    runs-on: [self-hosted, cool-jetson]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Set lowercase repo name
+        run: echo "REPO=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+      - name: Pull latest asr-agent image
+        run: docker pull ${{ env.REGISTRY }}/${{ env.REPO }}-asr-agent:latest
+
+      - name: Stop and remove existing container
+        run: |
+          docker stop asr-agent || true
+          docker rm asr-agent || true
+
+      - name: Run asr-agent container
+        run: |
+          docker run -d \
+            --name asr-agent \
+            --restart unless-stopped \
+            -p 50051:50051 \
+            ${{ env.REGISTRY }}/${{ env.REPO }}-asr-agent:latest
+
+      - name: Verify container is running
+        run: docker ps --filter name=asr-agent
+
+      - name: Check server logs
+        run: sleep 5 && docker logs asr-agent
+
   # Laptop deploy - only discord-bot and LLM agent (NOT asr-agent)
   deploy:
     needs: [build-agent, build-discord-bot]
-    runs-on: [self-hosted, Linux]
+    runs-on: [self-hosted, homelab-1]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
     steps:

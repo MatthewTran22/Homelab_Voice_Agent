@@ -1,1 +1,4 @@
 openai-whisper
+grpcio
+grpcio-tools
+grpcio-reflection

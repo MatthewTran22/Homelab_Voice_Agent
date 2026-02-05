@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+
+RUN pip install --no-cache-dir pytest grpcio grpcio-tools
+
+WORKDIR /app
+
+COPY ../protos/asr.proto ./protos/
+RUN python -m grpc_tools.protoc -I./protos --python_out=. --grpc_python_out=. ./protos/asr.proto
+
+COPY asr-agent/test_transcribe.py .
+
+CMD ["pytest", "test_transcribe.py", "-v"]

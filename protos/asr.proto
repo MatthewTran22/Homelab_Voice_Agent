@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package asr;
+
+service ASRService {
+  rpc Transcribe(TranscribeRequest) returns (TranscribeResponse);
+}
+
+message TranscribeRequest {
+  string file_path = 1;
+}
+
+message TranscribeResponse {
+  string text = 1;
+  bool success = 2;
+  string error = 3;
+}

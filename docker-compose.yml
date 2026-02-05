@@ -16,10 +16,23 @@ services:
       - ./audio-output:/app/audio
 
   asr-agent:
-    build: ./asr-agent
+    build:
+      context: .
+      dockerfile: ./asr-agent/Dockerfile
     container_name: asr-agent
     restart: unless-stopped
     environment:
       - PYTHONUNBUFFERED=1
+    ports:
+      - "50051:50051"
     volumes:
       - ./audio-output:/app/audio
+      - ./asr-agent/audio-tests:/app/audio-tests
+
+  asr-test:
+    build:
+      context: .
+      dockerfile: ./asr-agent/Dockerfile.test
+    container_name: asr-test
+    depends_on:
+      - asr-agent

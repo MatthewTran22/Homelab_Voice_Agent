@@ -1,3 +1,4 @@
 py-cord[voice]
 PyNaCl
 webrtcvad
+pytest
